@@ -1,8 +1,6 @@
 require "pry"
 
 class Day
-  LINE_REGEX = /(one|two|three|four|five|six|seven|eight|nine|[1-9])/
-
   def initialize(path)
     @path = path
   end
@@ -22,41 +20,34 @@ class Day
   end
 
   def parse(lines)
+    replacements = {
+      "one" => "o1e",
+      "two" => "t2o",
+      "three" => "t3e",
+      "four" => "f4r",
+      "five" => "f5e",
+      "six" => "s6x",
+      "seven" => "s7n",
+      "eight" => "e8t",
+      "nine" => "n9e",
+    }
+
     lines.map do |line|
-      matches = line.chomp.scan(LINE_REGEX)
+      line.chomp!
 
-      first = parse_word(matches[0][0])
-      last = parse_word(matches[-1][0])
+      replacements.each do |key, value|
+        line.gsub!(key, value)
+      end
 
-      raise if (first < 1 || first > 9 || last < 1 || last > 9)
-      raise unless first.is_a?(Integer) && last.is_a?(Integer)
+      line.gsub!(/\D/, '') # remove any non-digits
+
+      first = line[0].to_i
+      last = line[-1].to_i
+
+      raise "First digit out of bounds: #{first}" if (first < 1 || first > 9)
+      raise "Last diigit out of bounds: #{last}" if (last < 1 || last > 9)
 
       (first * 10 + last)
-    end
-  end
-
-  def parse_word(word)
-    case word
-      when "one"
-        1
-      when "two"
-        2
-      when "three"
-        3
-      when "four"
-        4
-      when "five"
-        5
-      when "six"
-        6
-      when "seven"
-        7
-      when "eight"
-        8
-      when "nine"
-        9
-      else
-        word.to_i
     end
   end
 end
