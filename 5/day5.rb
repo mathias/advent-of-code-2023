@@ -5,40 +5,37 @@ class Almanac
     @path = path
 
     @seeds = []
-    @seed_to_soil = {}
-    @soil_to_fertilizer = {}
-    @fertilizer_to_water = {}
-    @water_to_light = {}
-    @light_to_temperature = {}
-    @temperature_to_humidity = {}
-    @humidity_to_location = {}
   end
 
   def part_1
-    parse(read(@path))
+    modes = parse(read(@path))
 
-    output = @seeds.map do |seed|
-      soil = map_next(:@seed_to_soil, seed)
-      fertilizer = map_next(:@soil_to_fertilizer, soil)
-      water = map_next(:@fertilizer_to_water, fertilizer)
-      light = map_next(:@water_to_light, water)
-      temperature = map_next(:@light_to_temperature, light)
-      humidity = map_next(:@temperature_to_humidity, temperature)
-      [seed, soil, fertilizer, water, light, temperature, humidity, map_next(:@humidity_to_location, humidity)]
+    results = @seeds.map do |seed|
+      output = [seed]
+
+      prev_value = seed
+
+      MODES.each do |mode|
+        if key = modes[mode].keys.find { |k| k.include?(prev_value) }
+          offset = prev_value - key.first
+
+          value_range = modes[mode][key]
+          value = value_range.first + offset
+        else
+          value = prev_value
+        end
+
+        output.push(value)
+        prev_value = value
+      end
+
+      output
     end
-    output.map(&:last).min
+
+    results.map(&:last).min
   end
 
   private
-
-  def map_next(hsh, value)
-    output = self.instance_variable_get(hsh)[value]
-    if output.nil?
-      output = value
-    end
-    output
-  end
-
 
   def read(path)
     File.readlines(path).map(&:chomp!).compact
@@ -54,19 +51,22 @@ class Almanac
     "humidity-to-location"
   ]
 
+  def mode_str_to_sym(mode_str)
+    mode_str.replace(/-/,'_').to_sym
+  end
+
   def match_mode?(line)
     MODES.any? do |x|
       line.start_with?(x)
     end
   end
 
-  def mode_from(line)
-    line.split.first.gsub(/-/, '_').to_sym
-  end
-
   def parse(lines)
     puts "#{lines.count} lines received."
     mode = nil
+    #prev_mode = nil
+
+    modes = {}
 
     lines.each do |line|
       if line.start_with?("seeds: ")
@@ -74,39 +74,27 @@ class Almanac
         @seeds = rest.split.map(&:to_i)
         next
       elsif match_mode?(line)
-        mode = mode_from(line)
-      elsif mode != nil && line.length == 0 # switching mode, keep only mappings we need
-        if mode == :seed_to_soil
-          @seed_to_soil.keep_if { |k, _v| @seeds.include?(k) }
-          @seeds.each do |k|
-            if !@seed_to_soil.has_key?(k)
-              @seed_to_soil[k] = k
-            end
-          end
-        else
-          from, to = mode.to_s.split("_to_")
-          prev_mode = MODES.find { |x| x.end_with?(from) }
-          keys_from_prev = self.instance_variable_get("@#{mode_from(prev_mode)}").values
-
-          self.instance_variable_get("@#{mode}").keep_if { |k, _v| keys_from_prev.include?(k) }
-
-          keys_from_prev.each do |k|
-            if !self.instance_variable_get("@#{mode}").has_key?(k)
-              self.instance_variable_get("@#{mode}")[k] = k
-            end
-          end
-        end
+        mode = line.split.first
+        modes[mode] = {}
+        next
+      elsif line.length == 0
+        # switching mode, TODO
+        #previous_mode_keys = ??
+        # if prev_mode.nil?
+        #   use @seeds
+        # else
+        #   modes[prev_mode].values # become our keys to keep in this mode
       elsif mode != nil && line.length > 0
-        # Parse maps lines in:
-        dest_start, source_start, range_length = line.split.map(&:to_i)
+        dest, source, range_len = line.split.map(&:to_i)
 
-        (0..range_length-1).each do |i|
-          self.instance_variable_get("@#{mode}").send("[]=", source_start + i, dest_start + i);
-        end
-      elsif line.length != 0
-        raise "Not implemented yet"
+        modes[mode].merge!({
+          (source..source+range_len) => (dest..dest+range_len)
+        })
+      else
+        raise "Problem with input"
       end
     end
+    modes
   end
 end
 
