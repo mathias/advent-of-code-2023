@@ -7,11 +7,9 @@ class Almanac
     @seeds = []
   end
 
-  def part_1
-    modes = parse(read(@path))
-
-    results = @seeds.map do |seed|
-      output = [seed]
+  def walk_seeds(seeds, modes)
+    results = seeds.map do |seed|
+      output = nil
 
       prev_value = seed
 
@@ -24,15 +22,51 @@ class Almanac
         else
           value = prev_value
         end
+        raise "Bad value in #{output.to_s}" if value == 0
 
-        output.push(value)
+        output = value
         prev_value = value
       end
 
       output
     end
 
-    results.map(&:last).min
+    results.min
+  end
+
+  def part_1
+    modes = parse(read(@path))
+    walk_seeds(@seeds, modes)
+  end
+
+  def range_intersection(a, b)
+    return nil if (a.max < b.begin or b.max < a.begin)
+    [a.begin, b.begin].max..[a.max, b.max].min
+  end
+
+  def part_2
+    modes = parse(read(@path))
+
+    first_mode_values = modes[MODES.first].values.sort { _1.first <=> _2.first }
+
+    seed_ranges = @seeds.clone
+      .each_slice(2)
+      .map { |start, offset| (start..(start+offset-1)) }
+      .sort { |x, y| x.first <=> y.first }
+      .reduce([]) { |accum, range|
+        first_mode_values.each do |mode_range|
+          intersect = range_intersection(mode_range, range)
+          accum << intersect if intersect
+        end
+        accum
+      }
+    threads = []
+    seed_ranges.each do |range|
+      threads << Thread.new { walk_seeds(range.to_a, modes) }
+    end
+    threads.each { |thr| thr.join }
+    results = threads.map { |thr| thr.value }
+    results.min
   end
 
   private
@@ -64,7 +98,6 @@ class Almanac
   def parse(lines)
     puts "#{lines.count} lines received."
     mode = nil
-    #prev_mode = nil
 
     modes = {}
 
@@ -78,12 +111,7 @@ class Almanac
         modes[mode] = {}
         next
       elsif line.length == 0
-        # switching mode, TODO
-        #previous_mode_keys = ??
-        # if prev_mode.nil?
-        #   use @seeds
-        # else
-        #   modes[prev_mode].values # become our keys to keep in this mode
+        next
       elsif mode != nil && line.length > 0
         dest, source, range_len = line.split.map(&:to_i)
 
@@ -109,5 +137,8 @@ if __FILE__==$0
   puts "part 1 actual: " + Almanac.new("input.txt").part_1.to_s
 
   # Part 2
-  # TODO
+  sample_part_2 = Almanac.new("sample_input.txt").part_2
+  raise "Invalid sample answer: got #{sample_part_2} expected 46" unless sample_part_2 == 46
+  puts "part 2 sample: " + sample_part_2.to_s
+  puts "part 2 actual: " + Almanac.new("input.txt").part_2.to_s
 end
