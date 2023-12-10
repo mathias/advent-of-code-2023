@@ -87,34 +87,77 @@ fn part_2(file_path: &str) -> u64 {
     println!("Found {} initial nodes to walk in parallel", start_nodes.len());
     let mut current_nodes = start_nodes.clone();
 
-    let mut final_state_met = false;
+    //let mut final_state_met = false;
     let binding = vec_of_instructions(instructions);
-    let mut instructions_iter = binding.iter().cloned().cycle();
+    let instructions_iter = binding.iter().cloned().cycle();
 
-    while !final_state_met {
-        let instruction = instructions_iter.next().unwrap();
+    //while !final_state_met {
+        //let instruction = instructions_iter.next().unwrap();
 
-        let mut next_nodes = vec![];
+        //let mut next_nodes = vec![];
 
-        for node in &current_nodes {
-            // choose next step for this node:
-            let next_node = choose_next_node(instruction, node.to_string(), nodes.clone());
+        //for node in &current_nodes {
+             //choose next step for this node:
+            //let next_node = choose_next_node(instruction, node.to_string(), nodes.clone());
 
-            next_nodes.push(next_node);
+            //next_nodes.push(next_node);
+        //}
+         //check if all current_nodes end in Z
+        //if next_nodes.clone().into_iter().all(|x| ends_with(&x, "Z")) {
+            //final_state_met = true;
+        //}
+        //current_nodes = next_nodes.clone();
+        //steps += 1;
+        //if steps % 1000 == 0 {
+            //print!("+");
+        //}
+    //}
+    let mut steps: Vec<u64> = vec![];
+    for node in start_nodes.clone().into_iter() {
+        let these_instructions =  instructions_iter.clone();
+        let mut this_steps: u64 = 0;
+        let mut current_node = node;
+
+        for instruction in these_instructions { // cycle until finished
+            if ends_with(&current_node, "Z") {
+                break;
+            }
+
+            current_node = choose_next_node(instruction, current_node.to_string(), nodes.clone());
+
+            this_steps += 1;
         }
-        // check if all current_nodes end in Z
-        if next_nodes.clone().into_iter().all(|x| ends_with(&x, "Z")) {
-            final_state_met = true;
-        }
-        current_nodes = next_nodes.clone();
-        steps += 1;
-        if steps % 1000 == 0 {
-            print!("+");
-        }
+        steps.push(this_steps);
+    }
+    //dbg!(steps);
+
+    // then we need to LCM the steps array:
+    //println!("");
+    steps.iter().fold(1, |acc, b| lcm(acc, *b))
+}
+
+fn lcm(number: u64, other: u64) -> u64 {
+    number * other / gcd(number, other)
+}
+
+fn gcd(number: u64, other: u64) -> u64 {
+    let mut max = number;
+    let mut min = other;
+    if min > max {
+        let val = max;
+        max = min;
+        min = val;
     }
 
-    println!("");
-    steps
+    loop {
+        let res = max % min;
+        if res == 0 {
+            return min
+        }
+
+        max = min;
+        min = res;
+    }
 }
 
 fn main() {
