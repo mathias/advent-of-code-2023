@@ -1,0 +1,8 @@
+Part 1:
+Time elapsed in Sample 1 is: 97.288µs
+Sample 1 total: 21
+Time elapsed in Input is: 9.582622ms
+Input total: 7490
+Part 2:
+Time elapsed in Sample part 2 is: 174.360131ms
+Part 2 sample input total: 525152

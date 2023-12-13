@@ -1,5 +1,6 @@
 use std::fs;
 use std::time::Instant;
+use std::collections::HashMap;
 
 fn parse_file(file_path: &str) -> Vec<String> {
     let mut lines: Vec<String> = vec![];
@@ -10,7 +11,7 @@ fn parse_file(file_path: &str) -> Vec<String> {
     lines
 }
 
-fn calculate_solutions(springs: &Vec<char>, groups: &Vec<usize>) -> usize {
+fn calculate_solutions(springs: &Vec<char>, groups: &Vec<usize>, memo: &mut HashMap<(Vec<usize>, Vec<char>), usize>) -> usize {
     if springs.is_empty() {
         if groups.is_empty() {
             return 1
@@ -20,14 +21,17 @@ fn calculate_solutions(springs: &Vec<char>, groups: &Vec<usize>) -> usize {
     }
 
     match springs[0] {
-        '.' => calculate_solutions(&springs[1..].to_vec(), &groups),
-        '#' => calculate_hash_solutions(&springs, &groups),
-        '?' => calculate_solutions(&springs[1..].to_vec(), &groups) + calculate_hash_solutions(&springs, &groups),
+        '.' => calculate_solutions(&springs[1..].to_vec(), &groups, memo),
+        '#' => calculate_hash_solutions(&springs, &groups, memo),
+        '?' => calculate_solutions(&springs[1..].to_vec(), &groups, memo) + calculate_hash_solutions(&springs, &groups, memo),
         _ => panic!("At the disco!")
     }
 }
 
-fn calculate_hash_solutions(springs: &Vec<char>, groups: &Vec<usize>) -> usize {
+fn calculate_hash_solutions(springs: &Vec<char>, groups: &Vec<usize>, memo: &mut HashMap<(Vec<usize>, Vec<char>), usize>) -> usize {
+     if let Some(&result) = memo.get(&(groups.clone(), springs.clone())) {
+         return result;
+     }
     if groups.is_empty() {
         return 0
     }
@@ -55,18 +59,19 @@ fn calculate_hash_solutions(springs: &Vec<char>, groups: &Vec<usize>) -> usize {
     if springs[x] == '#' {
         return 0
     }
-    let result = calculate_solutions(&springs[(x+1)..].to_vec(), &groups[1..].to_vec());
+    let result = calculate_solutions(&springs[(x+1)..].to_vec(), &groups[1..].to_vec(), memo);
+    memo.insert((groups.clone(), springs.clone()), result);
     result
 }
 
-fn process_row(line: String) -> usize {
+fn process_row(line: String, memo: &mut HashMap<(Vec<usize>, Vec<char>), usize>) -> usize {
     let (first, last) = line.split_once(" ").unwrap();
     let springs: Vec<char> = first.chars().collect();
 
     let split_groups_strs: Vec<&str> = last.split(",").collect();
     let split_groups: Vec<usize> = split_groups_strs.into_iter().map(|x| x.parse().unwrap()).collect();
 
-    let result = calculate_solutions(&springs, &split_groups);
+    let result = calculate_solutions(&springs, &split_groups, memo);
 
     result
 }
@@ -74,9 +79,10 @@ fn process_row(line: String) -> usize {
 fn part_1(file_path: &str) -> usize {
     let lines = parse_file(file_path);
     let mut sum = 0;
+    let mut memo = HashMap::new();
 
     for line in lines {
-        sum += process_row(line.clone());
+        sum += process_row(line.clone(), &mut memo);
     }
 
     sum
@@ -85,20 +91,21 @@ fn part_1(file_path: &str) -> usize {
 fn part_2(file_path: &str) -> usize {
     let lines = parse_file(file_path);
     let mut sum = 0;
+    let mut memo = HashMap::new();
 
     for mut line in lines {
         // modify each line thusly:
         // replace the list of springs with five copies of itself, separated by ?
         // replace the list of groups with five copies of itself, separated by ,
+
         let (first, last) = line.split_once(" ").unwrap();
 
         let new_springs: String = (0..5).map(|_| first.chars().collect()).collect::<Vec<String>>().join("?");
         let new_groups: String = (0..5).map(|_| last.chars().collect()).collect::<Vec<String>>().join(",");
 
         line = vec![new_springs, new_groups].join(" ");
-        dbg!(&line);
 
-        sum += process_row(line.clone());
+        sum += process_row(line.clone(), &mut memo);
     }
 
     sum
@@ -139,5 +146,5 @@ fn main() {
     let sample_part_2_total = process_input_2("Sample part 2", sample_1_file_path);
     assert!(sample_part_2_expected == sample_part_2_total, "score for part 2 sample input must be {}, got {}", sample_part_2_expected, sample_part_2_total);
     println!("Part 2 sample input total: {}", sample_part_2_total);
-    //println!("Input total: {}", process_input_2("Input", input_file_path));
+    println!("Acutal input total: {}", process_input_2("Input", input_file_path));
 }
